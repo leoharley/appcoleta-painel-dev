@@ -32,3 +32,6 @@ user_guide_src/cilexer/pycilexer.egg-info/*
 /tests/results/
 /application/config/database.php
 /application/config/config.php
+
+# Dumps de banco (dados pessoais e credenciais): nunca versionar
+/sql/

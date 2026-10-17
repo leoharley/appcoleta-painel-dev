@@ -34,6 +34,9 @@ $config['cors_allowed_origins'] = array(
     'https://institutoalveslima.com.br',
     'http://institutoalveslima.com.br',
 
+    // Ambiente de evoluções (VPS): PWA em subdomínio separado do painel/API
+    'https://app.institutoalveslima.online',
+
     // TODO: quando o PWA tiver domínio definitivo, adicione aqui.
     // Exemplo:
     // 'https://coleta.institutoalveslima.com.br',
