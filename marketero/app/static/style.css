@@ -1,0 +1,19 @@
+:root { --mkt: #23345F; --mkt-accent: #FF9B1B; }
+body { background: #f4f6fa; }
+.bg-mkt { background: var(--mkt); }
+.btn-mkt { background: var(--mkt-accent); border-color: var(--mkt-accent); color: #1b1b1b; font-weight: 600; }
+.btn-mkt:hover { background: #f08a00; border-color: #f08a00; }
+.card { border: 0; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.stat { font-size: 1.9rem; font-weight: 700; color: var(--mkt); line-height: 1.1; }
+.table td, .table th { vertical-align: middle; }
+.chat { max-height: 65vh; overflow-y: auto; background: #ece5dd; border-radius: .5rem; padding: 1rem; }
+.bubble { max-width: 78%; padding: .5rem .75rem; border-radius: .6rem; margin-bottom: .5rem;
+          word-wrap: break-word; box-shadow: 0 1px 1px rgba(0,0,0,.08); }
+.bubble.in { background: #fff; margin-right: auto; }
+.bubble.out { background: #dcf8c6; margin-left: auto; }
+.bubble.system { background: #fff3cd; margin: .5rem auto; font-size: .85rem; text-align: center; }
+.bubble .txt { white-space: pre-wrap; }
+.bubble .meta { font-size: .72rem; color: #6c757d; margin-top: .2rem; }
+.log { white-space: pre-wrap; font-size: .8rem; max-height: 220px; overflow-y: auto; background: #f8f9fa; }
+textarea.code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85rem; }
+.login-card { max-width: 380px; margin: 8vh auto; }

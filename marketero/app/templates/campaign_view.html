@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ c.name }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h4 mb-0">{{ c.name }} <span class="badge text-bg-{{ {'running':'success','paused':'warning','finished':'secondary'}.get(c.status, 'light') }} fs-6 align-middle">{{ c.status|label }}</span></h1>
+  <form method="post" action="{{ url('/campanhas/' ~ c.id ~ '/acao') }}" class="d-flex flex-wrap gap-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% if c.status in ("draft", "paused") %}<button class="btn btn-mkt btn-sm" name="action" value="start"
+        onclick="return confirm('Iniciar o envio para {{ counts.get('pending', 0) }} contato(s)?{{ ' (MODO SIMULAÇÃO: nada será enviado de verdade)' if simulation }}')">Iniciar</button>{% endif %}
+    {% if c.status == "running" %}<button class="btn btn-warning btn-sm" name="action" value="pause">Pausar</button>{% endif %}
+    <button class="btn btn-outline-secondary btn-sm" name="action" value="refresh_audience">Incluir contatos novos</button>
+    {% if counts.get('failed') %}<button class="btn btn-outline-secondary btn-sm" name="action" value="retry_failed">Reenviar falhas</button>{% endif %}
+    {% if c.status != "running" %}<button class="btn btn-outline-danger btn-sm" name="action" value="delete" onclick="return confirm('Excluir a campanha?')">Excluir</button>{% endif %}
+  </form>
+</div>
+{% if simulation %}<div class="alert alert-info small">Modo simulação ligado: os envios são registrados, mas nada sai pelo WhatsApp.</div>{% endif %}
+<div class="row g-3 mb-3">
+  {% for key, label in [("total","Destinatários"),("pending","Aguardando"),("queued","Na fila do Kentro"),("sent","Enviadas"),("delivered","Entregues"),("read","Lidas"),("replied","Responderam"),("failed","Falhas"),("skipped","Puladas")] %}
+  <div class="col-6 col-md-3 col-xl"><a class="text-decoration-none" href="?status={{ '' if key == 'total' else key }}"><div class="card"><div class="card-body py-2">
+    <div class="stat">{{ counts.get(key, 0) }}</div><div class="small text-muted">{{ label }}</div></div></div></a></div>
+  {% endfor %}
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-lg-6"><div class="card h-100"><div class="card-body small">
+    <div><b>Template:</b> {{ c.template_name }} ({{ c.template_language }})</div>
+    <div><b>Público:</b> {{ c.filter_tags or "todos os contatos com telefone" }}</div>
+    <div><b>Ritmo:</b> {{ c.rate_per_minute }} por minuto{% if c.start_at %} · <b>início:</b> {{ c.start_at|dt }}{% endif %}</div>
+    {% if c.ai_context %}<div class="mt-2"><b>Orientações para a IA:</b><br>{{ c.ai_context }}</div>{% endif %}
+  </div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-body small">
+    <b>Prévia</b>{% if preview %} para {{ preview[0].name or preview[0].organization }}:
+      {% if preview[1] %}<div class="bubble out mt-2" style="max-width:100%"><div class="txt">{{ preview[1] }}</div></div>
+      {% else %}<div class="text-muted mt-1">Variáveis: {{ preview[2]|join(" | ") or "nenhuma" }} (cadastre o texto do template para ver a mensagem)</div>{% endif %}
+    {% else %}<div class="text-muted">sem destinatários elegíveis.</div>{% endif %}
+  </div></div></div>
+</div>
+<div class="card"><div class="table-responsive"><table class="table table-sm small mb-0">
+  <thead class="table-light"><tr><th>Contato</th><th>WhatsApp</th><th>Situação</th><th>Enviada em</th><th>Detalhe</th></tr></thead>
+  <tbody>
+  {% for r in recs %}
+  <tr><td><a href="{{ url('/contatos/' ~ r.contact.id) }}">{{ r.contact.name or r.contact.organization }}</a></td>
+    <td class="text-nowrap">{{ r.contact.phone|phone }}</td><td>{{ r.status|label }}</td>
+    <td class="text-nowrap">{{ r.sent_at|dt }}</td><td class="text-danger">{{ r.error }}</td></tr>
+  {% else %}<tr><td colspan="5" class="text-center text-muted py-3">Nenhum destinatário{{ ' nesta situação' if status }}.</td></tr>{% endfor %}
+  </tbody></table></div></div>
+{% endblock %}

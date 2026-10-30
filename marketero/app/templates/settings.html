@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Configurações{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">Configurações</h1>
+<ul class="nav nav-tabs mb-4">
+  {% for skey, stitle, _g in sections %}
+  <li class="nav-item"><a class="nav-link {{ 'active' if skey == section }}" href="{{ url('/configuracoes/' ~ skey) }}">{{ stitle }}</a></li>
+  {% endfor %}
+</ul>
+{% set titles = {"ia": "Provedor e modelo de IA", "atendimento": "Atendimento do chatbot",
+                 "canal": "Como o sistema acessa o WhatsApp", "kentro": "WhatsApp pelo Kentro (atenderbem)",
+                 "whatsapp": "WhatsApp direto na Cloud API da Meta", "disparo": "Disparos e descadastro"} %}
+{% set providers = {"kentro": "kentro", "whatsapp": "meta"} %}
+<form method="post" action="{{ url('/configuracoes') }}" id="settings-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="section" value="{{ section }}">
+  {% for gkey in section_groups %}{% set gtitle = titles[gkey] %}
+  <div class="card mb-4" {% if gkey in providers %}data-provider="{{ providers[gkey] }}"{% endif %}>
+    <div class="card-header bg-white fw-semibold">{{ gtitle }}</div>
+    <div class="card-body">
+      {% if gkey == "kentro" %}
+      <div class="alert alert-info small">
+        O robô usa a API de integração do Kentro: lê os atendimentos da fila a cada poucos segundos, responde enquanto o
+        atendimento <b>aguarda na fila</b> (sem atendente) e para quando um atendente assume. Quando a conversa precisa
+        de atendimento humano, deixa uma nota interna no atendimento e continua respondendo até um atendente assumir. Os disparos das campanhas usam os <b>templates aprovados cadastrados no Kentro</b>
+        e aparecem nos relatórios dele com o nome da campanha.<br>
+        <b>ID da fila</b>: número da fila (canal) do WhatsApp no Kentro. <b>Chave</b>: a chave global de API
+        (Configurações › Geral) ou a chave da fila. Se o Kentro restringir IPs na aba Segurança, libere <code>179.197.234.17</code>.
+      </div>
+      {% endif %}
+      {% if gkey == "atendimento" %}
+      <div class="alert alert-info small">
+        <b>Tempo de resposta:</b> o chatbot espera o tempo configurado a partir da <b>última</b> mensagem da pessoa; se ela
+        mandar outra nesse intervalo, a contagem recomeça e as mensagens são respondidas juntas. O tempo que a IA leva para
+        escrever (alguns segundos) soma a isso. Use 0 para responder o mais rápido possível; máximo {{ max_delay }} segundos.
+      </div>
+      {% endif %}
+      {% if gkey == "whatsapp" %}
+      <div class="alert alert-info small">
+        No painel da Meta (developers.facebook.com → seu app → WhatsApp → Configuração), em <b>Webhook</b>:<br>
+        URL de callback: <code>{{ webhook_url }}</code><br>
+        Verificar token: o valor do campo <i>Token de verificação</i> abaixo.<br>
+        Depois assine o campo <b>messages</b>. O primeiro contato com cada pessoa só pode ser feito com <b>template aprovado</b>;
+        texto livre só nas 24 h seguintes à última mensagem dela.
+      </div>
+      {% endif %}
+      <div class="row g-3">
+      {% for f in fields if f.group == gkey %}
+        {% set wide = f.kind == "textarea" %}
+        <div class="{{ 'col-12' if wide else 'col-md-6' }}">
+          {% if f.kind == "bool" %}
+          <div class="form-check form-switch mt-md-4">
+            <input class="form-check-input" type="checkbox" id="{{ f.key }}" name="{{ f.key }}" {{ "checked" if values[f.key] in ("1","true","on") }}>
+            <label class="form-check-label" for="{{ f.key }}">{{ f.label }}</label>
+          </div>
+          {% else %}
+          <label class="form-label" for="{{ f.key }}">{{ f.label }}</label>
+          {% if f.kind == "select" %}
+          <select class="form-select" id="{{ f.key }}" name="{{ f.key }}">
+            {% for v, l in f.options %}<option value="{{ v }}" {{ "selected" if values[f.key] == v }}>{{ l }}</option>{% endfor %}
+          </select>
+          {% elif f.kind == "textarea" %}
+          <textarea class="form-control code" id="{{ f.key }}" name="{{ f.key }}" rows="{{ 8 if f.key == 'system_prompt' else 5 }}">{{ values[f.key] }}</textarea>
+          {% elif f.kind == "secret" %}
+          <input class="form-control" type="password" id="{{ f.key }}" name="{{ f.key }}" autocomplete="new-password"
+                 placeholder="{{ '•••••••• (configurado — deixe vazio para manter)' if secret_set[f.key] else 'não configurado' }}">
+          {% if secret_set[f.key] %}<div class="form-check small mt-1"><input class="form-check-input" type="checkbox" name="{{ f.key }}__clear" id="{{ f.key }}__clear">
+            <label class="form-check-label" for="{{ f.key }}__clear">apagar</label></div>{% endif %}
+          {% else %}
+          <input class="form-control" type="{{ 'number' if f.kind == 'int' else 'text' }}" id="{{ f.key }}" name="{{ f.key }}" value="{{ values[f.key] }}">
+          {% endif %}
+          {% endif %}
+          {% if f.help %}<div class="form-text">{{ f.help }}</div>{% endif %}
+        </div>
+        {% if f.key == "knowledge_base" %}
+        {# Campos ligados aos formulários kb-upload / kb-action (fora deste form) pelo atributo form= #}
+        <div class="col-12" id="conhecimento">
+          <label class="form-label">Base de conhecimento adicional (arquivos .md)</label>
+          <div class="border rounded p-3 bg-light">
+            <p class="small text-muted mb-2">
+              Importe documentos em Markdown (apresentação do Instituto, serviços, metodologia, perguntas frequentes, cases…).
+              Os documentos <b>ativos</b> entram nas instruções da IA junto com a base de conhecimento acima.
+              Um arquivo com o mesmo nome de um já importado <b>substitui</b> o anterior. Máximo de {{ kb_max_kb }} KB por arquivo.
+              Salve as outras alterações desta página antes de importar.
+            </p>
+            <div class="input-group mb-3">
+              <input class="form-control" type="file" name="files" form="kb-upload" accept=".md,.markdown,text/markdown" multiple required>
+              <button class="btn btn-mkt" form="kb-upload">Importar .md</button>
+            </div>
+            {% if docs %}
+            <div class="table-responsive"><table class="table table-sm small align-middle mb-2 bg-white">
+              <thead class="table-light"><tr><th>Documento</th><th>Tamanho</th><th>Atualizado</th><th>Situação</th><th class="text-end">Ações</th></tr></thead>
+              <tbody>
+              {% for d in docs %}
+              {% set action_url = url('/configuracoes/conhecimento/' ~ d.id) %}
+              <tr class="{{ '' if d.enabled else 'text-muted' }}">
+                <td><a href="{{ action_url }}" target="_blank" rel="noopener">{{ d.name }}</a>
+                  <div class="text-muted text-truncate" style="max-width:420px">{{ d.content[:140] }}</div></td>
+                <td class="text-nowrap">{{ "%.1f"|format(d.content|length / 1024) }} KB</td>
+                <td class="text-nowrap">{{ d.updated_at|dt }}</td>
+                <td>{% if d.enabled %}<span class="badge text-bg-success">Ativo</span>{% else %}<span class="badge text-bg-secondary">Desativado</span>{% endif %}</td>
+                <td class="text-end text-nowrap">
+                  <button class="btn btn-outline-secondary btn-sm" form="kb-action" formaction="{{ action_url }}" name="action" value="toggle">{{ "Desativar" if d.enabled else "Ativar" }}</button>
+                  <button class="btn btn-outline-danger btn-sm" form="kb-action" formaction="{{ action_url }}" name="action" value="delete"
+                          onclick='return confirm({{ ("Excluir " ~ d.name ~ "?")|tojson }})'>Excluir</button>
+                </td>
+              </tr>
+              {% endfor %}
+              </tbody>
+            </table></div>
+            {% set tokens = (active_chars / 4)|round|int %}
+            <div class="small {{ 'text-danger' if tokens > 100000 else 'text-muted' }}">
+              Em uso pela IA: {{ "%.1f"|format(active_chars / 1024) }} KB (~{{ "{:,}".format(tokens).replace(",", ".") }} tokens por resposta).
+              {% if tokens > 100000 %}Volume alto: cada resposta fica mais cara e lenta; desative o que não for essencial.
+              {% else %}Com Claude, essa parte fica em cache entre as mensagens, o que reduz o custo.{% endif %}
+            </div>
+            {% else %}
+            <div class="small text-muted">Nenhum documento importado.</div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+      {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  {# Os testes enviam este formulário: salvam o que está na tela e depois testam. #}
+  <div class="d-flex flex-wrap align-items-center gap-2">
+    <button class="btn btn-mkt">Salvar</button>
+    {% if section == "ia" %}
+    <button formaction="{{ url('/configuracoes/testar-ia') }}" class="btn btn-outline-secondary">Salvar e testar IA</button>
+    {% elif section == "whatsapp" %}
+    <button formaction="{{ url('/configuracoes/testar-whatsapp') }}" class="btn btn-outline-secondary">Salvar e testar conexão com o WhatsApp</button>
+    {% endif %}
+  </div>
+</form>
+
+{% if section == "atendimento" %}
+{# Formulários da base de conhecimento .md: os campos ficam dentro do card de atendimento, ligados pelo atributo form= #}
+<form id="kb-upload" method="post" action="{{ url('/configuracoes/conhecimento') }}" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+</form>
+<form id="kb-action" method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+</form>
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if section == "whatsapp" %}<script>
+// Mostra só os campos do canal escolhido (os outros continuam salvos, apenas ficam ocultos).
+const prov = document.getElementById("wa_provider");
+function syncProvider() {
+  document.querySelectorAll("[data-provider]").forEach(el => { el.hidden = el.dataset.provider !== prov.value; });
+}
+prov.addEventListener("change", syncProvider); syncProvider();
+</script>{% endif %}{% endblock %}

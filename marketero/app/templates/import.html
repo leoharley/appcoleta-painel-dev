@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Importar contatos{% endblock %}
+{% block content %}
+<h1 class="h4 mb-4">Importar contatos</h1>
+<div class="row g-4">
+  {% for s in sources %}
+  <div class="col-lg-6">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6">{{ s.label }}</h2>
+      {% if s.key == "tse_partidos" %}
+      <p class="small text-muted">Coleta os contatos <b>institucionais</b> publicados pelo TSE (telefone, e-mail, site e endereço dos diretórios nacionais).
+        O portal da Justiça Eleitoral costuma <b>bloquear acessos automáticos vindos de servidores</b>; nesse caso, abra
+        <a href="https://www.tse.jus.br/partidos/partidos-registrados-no-tse/registrados-no-tse" target="_blank" rel="noopener">a lista de partidos no TSE</a>,
+        entre na página de cada partido e salve com <kbd>Ctrl</kbd>+<kbd>S</kbd> (“Página da Web, somente HTML”). Depois envie os arquivos abaixo.</p>
+      {% else %}
+      <p class="small text-muted">Extrai telefones, e-mails e sites de uma página pública. Use só em páginas cujo uso dos contatos seja permitido.</p>
+      {% endif %}
+      <form method="post" action="{{ url('/importar/coletar') }}" class="mb-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="source" value="{{ s.key }}">
+        {% if s.key == "pagina" %}<input class="form-control form-control-sm mb-2" name="url" placeholder="https://..." required>{% endif %}
+        <div class="input-group input-group-sm">
+          <span class="input-group-text">Etiquetas</span><input class="form-control" name="tags" value="{{ s.default_tags }}">
+          <button class="btn btn-mkt">Coletar agora</button>
+        </div>
+      </form>
+      <form method="post" action="{{ url('/importar/arquivos') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="source" value="{{ s.key }}">
+        <label class="form-label small mb-1">Ou envie páginas salvas (.html, várias de uma vez)</label>
+        <div class="input-group input-group-sm">
+          <input class="form-control" type="file" name="files" accept=".html,.htm" multiple required>
+          <input type="hidden" name="tags" value="{{ s.default_tags }}">
+          <button class="btn btn-outline-primary">Enviar</button>
+        </div>
+      </form>
+    </div></div>
+  </div>
+  {% endfor %}
+  <div class="col-lg-6">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6">Planilha CSV</h2>
+      <p class="small text-muted">Colunas reconhecidas: nome, organizacao/partido, cargo, whatsapp/celular/telefone, email, site, endereco, cidade, uf, tags.
+        Separador vírgula ou ponto e vírgula. Contatos repetidos (mesmo telefone) são completados, não duplicados.</p>
+      <form method="post" action="{{ url('/contatos/importar-csv') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input class="form-control form-control-sm mb-2" type="file" name="file" accept=".csv,text/csv" required>
+        <div class="input-group input-group-sm"><span class="input-group-text">Etiquetas</span>
+          <input class="form-control" name="tags" value="importado"><button class="btn btn-mkt">Importar CSV</button></div>
+      </form>
+    </div></div>
+  </div>
+</div>
+<h2 class="h5 mt-5 mb-3">Últimas importações</h2>
+<div class="card"><div class="table-responsive"><table class="table small mb-0">
+  <thead class="table-light"><tr><th>#</th><th>Início</th><th>Fonte</th><th>Situação</th><th>Encontrados</th><th>Novos</th><th>Atualizados</th><th>Registro</th></tr></thead>
+  <tbody>
+  {% for j in jobs %}
+  <tr><td>{{ j.id }}</td><td class="text-nowrap">{{ j.created_at|dt }}</td><td>{{ j.description }}</td>
+    <td><span class="badge text-bg-{{ {'done':'success','error':'danger'}.get(j.status, 'warning') }}">{{ j.status|label if j.status != 'running' else 'Em andamento' }}</span></td>
+    <td>{{ j.found }}</td><td>{{ j.created }}</td><td>{{ j.updated }}</td>
+    <td style="min-width:320px"><div class="log p-2 rounded">{{ j.log }}</div></td></tr>
+  {% else %}<tr><td colspan="8" class="text-center text-muted py-3">Nenhuma importação ainda.</td></tr>{% endfor %}
+  </tbody></table></div></div>
+{% endblock %}

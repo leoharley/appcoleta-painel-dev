@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Conversas{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">Conversas</h1>
+<div class="list-group" id="inbox-list">
+  {% for c in conversations %}{% set m = last[c.id] %}
+  <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-start gap-3" href="{{ url('/conversas/' ~ c.id) }}">
+    <div class="me-auto" style="min-width:0">
+      <div class="fw-semibold">{{ c.contact.name or c.contact.organization or (c.contact.phone|phone) }}
+        {% if c.needs_human %}<span class="badge text-bg-danger ms-1">⚠ precisa de atendimento humano</span>{% endif %}
+        {% if c.bot_paused %}<span class="badge text-bg-warning ms-1">com a equipe</span>{% endif %}
+        {% if c.contact.opted_out %}<span class="badge text-bg-danger ms-1">descadastrado</span>{% endif %}</div>
+      <div class="small text-muted text-truncate">{% if m %}{{ "↩ " if m.direction == "out" }}{{ m.body[:140] }}{% endif %}</div>
+    </div>
+    <div class="text-end small text-nowrap">
+      <div class="text-muted">{{ c.last_message_at|dt }}</div>
+      {% if c.unread %}<span class="badge rounded-pill text-bg-success">{{ c.unread }}</span>{% endif %}
+    </div>
+  </a>
+  {% else %}
+  <div class="list-group-item text-center text-muted py-4">Nenhuma conversa ainda. Elas aparecem quando alguém escreve para o número ou quando uma campanha é enviada.</div>
+  {% endfor %}
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url('/static/live.js') }}?v=2"></script>
+<script>liveRefresh("{{ url('/conversas/estado') }}", ["inbox-list"]);</script>{% endblock %}

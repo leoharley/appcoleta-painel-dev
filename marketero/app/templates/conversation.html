@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{{ conv.contact.name or conv.contact.phone }}{% endblock %}
+{% block content %}
+{% set ct = conv.contact %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h1 class="h5 mb-0">{{ ct.name or ct.organization or (ct.phone|phone) }}</h1>
+    <div class="small text-muted">{{ ct.phone|phone }}{% if ct.organization and ct.name %} · {{ ct.organization }}{% endif %}
+      · <a href="{{ url('/contatos/' ~ ct.id) }}">ficha do contato</a></div>
+  </div>
+  <form method="post" action="{{ url('/conversas/' ~ conv.id ~ '/bot') }}" class="d-flex gap-2" id="conv-head">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% if conv.needs_human %}
+      <span class="badge text-bg-danger align-self-center">⚠ Precisa de atendimento humano</span>
+      <button class="btn btn-sm btn-outline-danger" name="action" value="resolve">Marcar como resolvido</button>
+    {% endif %}
+    {% if conv.bot_paused %}
+      <span class="badge text-bg-warning align-self-center">Chatbot pausado (atendimento humano)</span>
+      <button class="btn btn-sm btn-outline-success" name="action" value="resume">Reativar chatbot</button>
+      <button class="btn btn-sm btn-outline-success" name="action" value="resume_reply">Reativar e responder agora</button>
+    {% else %}
+      <span class="badge text-bg-success align-self-center">Chatbot ativo</span>
+      <button class="btn btn-sm btn-outline-warning" name="action" value="pause">Pausar chatbot</button>
+    {% endif %}
+  </form>
+</div>
+<div class="chat mb-3" id="chat">
+  {% for m in messages %}
+  <div class="bubble {{ 'system' if m.kind == 'system' else m.direction }}"><div class="txt">{{ m.body }}</div>
+    <div class="meta">{{ {"contact": "", "bot": "🤖 IA · ", "human": "👤 equipe · ", "campaign": "📣 campanha · "}.get(m.author, "") }}{{ m.created_at|dt }}
+      {% if m.direction == "out" and m.kind != "system" %} · {{ m.status|label }}{% endif %}
+      {% if m.error %}<div class="text-danger">{{ m.error }}</div>{% endif %}</div>
+  </div>
+  {% else %}<div class="text-center text-muted">Sem mensagens.</div>{% endfor %}
+</div>
+<div id="conv-compose">
+{% if ct.opted_out %}
+<div class="alert alert-danger small">Contato descadastrado: não envie mensagens.</div>
+{% elif window_open %}
+<form method="post" action="{{ url('/conversas/' ~ conv.id ~ '/enviar') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="input-group"><textarea class="form-control" name="text" rows="2" placeholder="Escreva uma resposta…" required></textarea>
+    <button class="btn btn-mkt">Enviar</button></div>
+  <div class="form-check small mt-1"><input class="form-check-input" type="checkbox" name="pause_bot" id="pause_bot" checked>
+    <label class="form-check-label" for="pause_bot">Pausar o chatbot nesta conversa (assumir o atendimento)</label></div>
+</form>
+{% else %}
+<div class="alert alert-secondary small">Mais de 24 h desde a última mensagem do contato: o WhatsApp só permite retomar a conversa com um template aprovado (crie uma campanha só com este contato).</div>
+{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url('/static/live.js') }}?v=2"></script>
+<script>
+const c = document.getElementById('chat'); c.scrollTop = c.scrollHeight;
+let atBottom = true;
+liveRefresh("{{ url('/conversas/estado') }}?cid={{ conv.id }}", ["chat", "conv-head", "conv-compose"], {
+  canReplace(id, el) {
+    if (id === "chat") atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (id === "conv-compose") {  // não apaga uma resposta sendo digitada
+      const t = el.querySelector("textarea");
+      return !t || (!t.value.trim() && document.activeElement !== t);
+    }
+    return true;
+  },
+  onUpdate() { if (atBottom) c.scrollTop = c.scrollHeight; }
+});
+</script>{% endblock %}

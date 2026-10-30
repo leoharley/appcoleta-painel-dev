@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Painel{% endblock %}
+{% block content %}
+<h1 class="h4 mb-4">Painel</h1>
+<div class="row g-3 mb-4">
+  {% for label, value, link in [
+      ("Contatos", stats.contacts, "/contatos"),
+      ("Com telefone", stats.with_phone, "/contatos"),
+      ("Descadastrados", stats.opted_out, "/contatos?status=optout"),
+      ("Conversas", stats.conversations, "/conversas"),
+      ("Não lidas", stats.unread, "/conversas"),
+      ("Campanhas enviando", stats.running, "/campanhas"),
+      ("Mensagens recebidas (24 h)", stats.msgs_in_24h, "/conversas"),
+      ("Disparos (24 h)", stats.sent_24h, "/campanhas")] %}
+  <div class="col-6 col-md-3"><a class="text-decoration-none" href="{{ url(link) }}">
+    <div class="card h-100"><div class="card-body">
+      <div class="stat">{{ value }}</div><div class="text-muted small">{{ label }}</div>
+    </div></div></a></div>
+  {% endfor %}
+</div>
+<div class="card">
+  <div class="card-header bg-white fw-semibold">Situação da configuração</div>
+  <ul class="list-group list-group-flush">
+    {% for label, ok, detail in checklist %}
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+      <span>{{ "✅" if ok else "⚠️" }} {{ label }}</span>
+      <span class="text-muted small text-end ms-3">{{ detail }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  <div class="card-body"><a class="btn btn-mkt btn-sm" href="{{ url('/configuracoes') }}">Abrir configurações</a></div>
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Templates{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Templates de mensagem do WhatsApp</h1>
+  {% if is_meta %}<a class="btn btn-outline-secondary btn-sm" href="{{ url('/modelos') }}">Atualizar</a>{% endif %}
+</div>
+
+{% if not is_meta %}
+<div class="alert alert-info">O canal configurado é o <b>Kentro</b>: os templates são cadastrados no próprio Kentro e
+  aparecem automaticamente em Campanhas. Esta tela funciona com o canal <b>Direto na Cloud API da Meta</b>.</div>
+{% else %}
+
+<div class="card mb-4"><div class="card-header fw-semibold">Templates na Meta</div>
+{% if load_error %}<div class="card-body text-danger small">Não foi possível listar os templates: {{ load_error }}</div>
+{% else %}
+<div class="table-responsive"><table class="table table-sm mb-0 small align-middle">
+  <thead class="table-light"><tr><th>Nome</th><th>Categoria</th><th>Situação</th><th>Mensagem</th><th></th></tr></thead>
+  <tbody>
+  {% for t in items %}
+  <tr>
+    <td class="text-nowrap"><code>{{ t.name }}</code><div class="text-muted">{{ t.language }}</div></td>
+    <td>{{ t.category }}</td>
+    <td><span class="badge text-bg-{{ t.color }}">{{ t.status }}</span>
+      {% if t.reason %}<div class="text-danger">{{ t.reason }}</div>{% endif %}</td>
+    <td style="min-width:260px">
+      {% if t.header %}<div class="fw-semibold">{{ t.header }}</div>{% endif %}
+      <div class="txt" style="white-space:pre-wrap">{{ t.body }}</div>
+      {% if t.footer %}<div class="text-muted">{{ t.footer }}</div>{% endif %}
+      {% if t.buttons %}<div class="mt-1">{% for b in t.buttons %}<span class="badge text-bg-light border me-1">{{ b }}</span>{% endfor %}</div>{% endif %}
+    </td>
+    <td class="text-end">
+      <form method="post" action="{{ url('/modelos/excluir') }}"
+            onsubmit="return confirm('Excluir o template {{ t.name }} na Meta? Isso vale para todos os idiomas e não pode ser desfeito.')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="name" value="{{ t.name }}">
+        <button class="btn btn-sm btn-outline-danger">Excluir</button></form>
+    </td>
+  </tr>
+  {% else %}<tr><td colspan="5" class="text-center text-muted py-3">Nenhum template nesta conta.</td></tr>{% endfor %}
+  </tbody></table></div>
+{% endif %}
+</div>
+
+<div class="card"><div class="card-header fw-semibold">Novo template</div><div class="card-body">
+  {% for e in errors %}<div class="alert alert-danger py-2 small mb-2">{{ e }}</div>{% endfor %}
+  <form method="post" action="{{ url('/modelos/criar') }}" class="row g-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="col-md-5"><label class="form-label">Nome</label>
+      <input class="form-control" name="name" value="{{ values.name }}" required placeholder="convite_pesquisa_eleitoral">
+      <div class="form-text">Só letras minúsculas, números e _ (o sistema ajusta sozinho).</div></div>
+    <div class="col-md-5"><label class="form-label">Categoria</label>
+      <select class="form-select" name="category">{% for k, l in categories %}
+        <option value="{{ k }}" {{ 'selected' if values.category == k }}>{{ l }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><label class="form-label">Idioma</label>
+      <input class="form-control" name="language" value="{{ values.language or 'pt_BR' }}"></div>
+    <div class="col-12"><label class="form-label">Cabeçalho (opcional)</label>
+      <input class="form-control" name="header" maxlength="60" value="{{ values.header }}" placeholder="Instituto Alves Lima"></div>
+    <div class="col-md-8"><label class="form-label">Mensagem</label>
+      <textarea class="form-control" name="body" rows="6" maxlength="1024" required
+        placeholder="Olá {{ '{{1}}' }}, tudo bem? Aqui é do Instituto Alves Lima. ...">{{ values.body }}</textarea>
+      <div class="form-text">Use <code>{{ '{{1}}' }}</code>, <code>{{ '{{2}}' }}</code>… nas partes que mudam por pessoa. Na campanha você
+        escolhe o que vai em cada uma ({nome}, {organizacao}…). O texto não pode começar nem terminar com uma variável.</div></div>
+    <div class="col-md-4"><label class="form-label">Exemplos das variáveis</label>
+      <textarea class="form-control" name="examples" rows="6" placeholder="Maria&#10;Partido Exemplo">{{ values.examples }}</textarea>
+      <div class="form-text">Um por linha, na ordem: exemplo do {{ '{{1}}' }}, do {{ '{{2}}' }}… A Meta usa para analisar.</div></div>
+    <div class="col-12"><label class="form-label">Rodapé (opcional)</label>
+      <input class="form-control" name="footer" maxlength="60" value="{{ values.footer }}" placeholder="Responda SAIR para não receber mais mensagens"></div>
+    <div class="col-md-6"><label class="form-label">Botões de resposta rápida (opcional)</label>
+      <textarea class="form-control" name="quick_replies" rows="3" placeholder="Quero saber mais&#10;SAIR">{{ values.quick_replies }}</textarea>
+      <div class="form-text">Até 3, um por linha, até 25 caracteres cada. Um botão <b>SAIR</b> descadastra quem tocar nele.</div></div>
+    <div class="col-md-6"><label class="form-label">Botão de link (opcional)</label>
+      <input class="form-control mb-2" name="url_text" maxlength="25" value="{{ values.url_text }}" placeholder="Conheça o Instituto">
+      <input class="form-control" name="url" value="{{ values.url }}" placeholder="https://institutoalveslima.com.br"></div>
+    <div class="col-12"><button class="btn btn-mkt">Enviar para aprovação da Meta</button></div>
+  </form>
+</div></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Nova campanha{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">Nova campanha</h1>
+<div class="alert alert-warning small">
+  O WhatsApp só permite que a empresa <b>inicie</b> uma conversa com um <b>template aprovado pela Meta</b>. Para contatos que nunca
+  falaram com vocês, a Meta exige que tenham concordado em receber mensagens (opt-in); disparos sem isso geram bloqueios e
+  denúncias, que derrubam a qualidade e o limite do número. Comece com poucos envios e acompanhe a qualidade no painel da Meta.
+</div>
+<form method="post" action="{{ url('/campanhas/criar') }}" class="card"><div class="card-body">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="row g-3">
+    <div class="col-md-6"><label class="form-label">Nome da campanha</label><input class="form-control" name="name" required></div>
+    <div class="col-md-6">
+      <label class="form-label">Template aprovado ({{ channel.label }})
+        {% if channel.key == 'meta' %}· <a href="{{ url('/modelos') }}" class="small">cadastrar template</a>{% endif %}</label>
+      {% if templates %}
+      <select class="form-select" name="template" id="template" required>
+        <option value="">Escolha…</option>
+        {% for t in templates %}<option value="{{ t.id }}|{{ t.language }}|{{ t.name }}" data-body="{{ t.body }}" data-params="{{ t.params }}">{{ t.name }} ({{ t.language }}{{ ', ' ~ t.category if t.category }}{{ ', ' ~ t.params ~ ' variável(is)' if t.params }})</option>{% endfor %}
+      </select>
+      <div class="form-text" id="template_hint"></div>
+      {% else %}
+      <div class="form-text text-danger mb-1">{{ "Não foi possível listar os templates: " ~ templates_error if templates_error else "Nenhum template aprovado encontrado." }}</div>
+      <div class="input-group"><input class="form-control" name="template_name" placeholder="{{ 'ID do template no Kentro' if channel.key == 'kentro' else 'nome_do_template' }}">
+        <input class="form-control" name="template_language" value="pt_BR" style="max-width:110px"></div>
+      {% endif %}
+    </div>
+    <div class="col-12"><label class="form-label">Texto do template (para prévia e histórico)</label>
+      <textarea class="form-control code" name="template_body" id="template_body" rows="3" placeholder="Olá {{ '{{1}}' }}, aqui é do Instituto Alves Lima..."></textarea></div>
+    <div class="col-md-6"><label class="form-label">Valores das variáveis — uma linha por variável ({{ '{{1}}' }}, {{ '{{2}}' }}…)</label>
+      <textarea class="form-control code" name="variables" rows="3" placeholder="{nome}&#10;{organizacao}"></textarea>
+      <div class="form-text">Campos disponíveis: {nome} (primeiro nome), {nome_completo}, {organizacao}, {cargo}, {cidade}, {uf}.</div></div>
+    <div class="col-md-6"><label class="form-label">Orientações para a IA nesta campanha</label>
+      <textarea class="form-control code" name="ai_context" rows="3" placeholder="Ex.: oferecer pesquisa de intenção de voto para 2026 e agendar uma reunião com o comercial."></textarea></div>
+    <div class="col-md-6"><label class="form-label">Público (etiquetas)</label>
+      <select class="form-select" name="tags" multiple size="5">{% for t in tags %}<option>{{ t }}</option>{% endfor %}</select>
+      <div class="form-text">Sem seleção = todos os contatos com telefone, não descadastrados. Ctrl+clique para várias.</div></div>
+    <div class="col-md-3"><label class="form-label">Envios por minuto (máx. {{ max_rate }})</label>
+      <input class="form-control" type="number" name="rate_per_minute" value="6" min="1" max="{{ max_rate }}"></div>
+    <div class="col-md-3"><label class="form-label">Começar em (opcional)</label>
+      <input class="form-control" type="datetime-local" name="start_at"></div>
+  </div>
+</div>
+<div class="card-footer bg-white"><button class="btn btn-mkt">Criar campanha</button>
+  <span class="small text-muted ms-2">Ela é criada parada; o envio começa ao clicar em Iniciar.</span></div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+const sel = document.getElementById('template');
+if (sel) sel.addEventListener('change', () => {
+  const o = sel.selectedOptions[0];
+  if (o && o.dataset.body) document.getElementById('template_body').value = o.dataset.body;
+  const n = o ? parseInt(o.dataset.params || '0', 10) : 0;
+  document.getElementById('template_hint').textContent = n
+    ? `Este template tem ${n} variável(is): preencha ${n} linha(s) em "Valores das variáveis", na ordem cabeçalho, corpo e botões.`
+    : '';
+});
+</script>
+{% endblock %}

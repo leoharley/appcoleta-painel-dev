@@ -1,0 +1,2 @@
+# Backup diário do banco do Marketero (cópia consistente via API de backup do SQLite), mantém 14 dias.
+30 3 * * * marketero /opt/marketero/.venv/bin/python -c "import sqlite3, datetime, pathlib; d = pathlib.Path('/var/lib/marketero/backups'); d.mkdir(exist_ok=True); sqlite3.connect('/var/lib/marketero/marketero.db').backup(sqlite3.connect(d / ('marketero-' + datetime.date.today().isoformat() + '.db')))" && find /var/lib/marketero/backups -name 'marketero-*.db' -mtime +14 -delete

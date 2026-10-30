@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ "Novo contato" if is_new else contact.name or "Contato" }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">{{ "Novo contato" if is_new else "Contato #" ~ contact.id }}</h1>
+  {% if conversation %}<a class="btn btn-outline-primary btn-sm" href="{{ url('/conversas/' ~ conversation.id) }}">Abrir conversa</a>{% endif %}
+</div>
+<form method="post" action="{{ url('/contatos/salvar') }}" class="card"><div class="card-body">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  {% if not is_new %}<input type="hidden" name="id" value="{{ contact.id }}">{% endif %}
+  <div class="row g-3">
+    <div class="col-md-6"><label class="form-label">Nome</label><input class="form-control" name="name" value="{{ contact.name or '' }}"></div>
+    <div class="col-md-6"><label class="form-label">Organização / partido</label><input class="form-control" name="organization" value="{{ contact.organization or '' }}"></div>
+    <div class="col-md-4"><label class="form-label">Cargo</label><input class="form-control" name="role" value="{{ contact.role or '' }}"></div>
+    <div class="col-md-4"><label class="form-label">WhatsApp / telefone</label><input class="form-control" name="phone" value="{{ contact.phone|phone }}" placeholder="(38) 99999-8888"></div>
+    <div class="col-md-4"><label class="form-label">E-mail</label><input class="form-control" name="email" type="email" value="{{ contact.email or '' }}"></div>
+    <div class="col-md-6"><label class="form-label">Site</label><input class="form-control" name="website" value="{{ contact.website or '' }}"></div>
+    <div class="col-md-6"><label class="form-label">Endereço</label><input class="form-control" name="address" value="{{ contact.address or '' }}"></div>
+    <div class="col-md-5"><label class="form-label">Cidade</label><input class="form-control" name="city" value="{{ contact.city or '' }}"></div>
+    <div class="col-md-2"><label class="form-label">UF</label><input class="form-control" name="uf" maxlength="2" value="{{ contact.uf or '' }}"></div>
+    <div class="col-md-5"><label class="form-label">Etiquetas (separadas por vírgula)</label><input class="form-control" name="tags" value="{{ contact.tags or '' }}"></div>
+    <div class="col-12"><label class="form-label">Observações</label><textarea class="form-control" name="notes" rows="3">{{ contact.notes or '' }}</textarea></div>
+    <div class="col-12"><div class="form-check">
+      <input class="form-check-input" type="checkbox" name="opted_out" id="opted_out" {{ "checked" if contact.opted_out }}>
+      <label class="form-check-label" for="opted_out">Descadastrado (não recebe campanhas nem respostas automáticas)</label></div></div>
+  </div>
+  {% if not is_new %}
+  <p class="small text-muted mt-3 mb-0">Origem: {{ contact.source }} {{ contact.source_ref }} · Situação do WhatsApp: {{ contact.whatsapp_status|label }} · Criado em {{ contact.created_at|dt }}</p>
+  {% endif %}
+</div>
+<div class="card-footer bg-white"><button class="btn btn-mkt">Salvar</button>
+  <a class="btn btn-link" href="{{ url('/contatos') }}">Voltar</a></div>
+</form>
+{% endblock %}

@@ -1,0 +1,22 @@
+[Unit]
+Description=Marketero - chatbot de WhatsApp com IA e campanhas de disparo
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=marketero
+Group=marketero
+WorkingDirectory=/opt/marketero
+EnvironmentFile=/etc/marketero/marketero.env
+# Um único processo: o disparador de campanhas roda dentro dele.
+ExecStart=/opt/marketero/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8100 --workers 1 --root-path /marketero --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-server-header
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/marketero
+
+[Install]
+WantedBy=multi-user.target
